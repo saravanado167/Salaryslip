@@ -103,7 +103,7 @@
 let policies = JSON.parse(localStorage.getItem('salary_policies_v2') || '[]');
 let settings = JSON.parse(localStorage.getItem('salary_settings_v2') || '{}');
 
-function rupee(n){ return '₹' + Number(n||0).toLocaleString('en-IN'); }
+function rupee(n){return 'Rs. ' + Number(n || 0).toLocaleString('en-IN');}
 function val(id){ return document.getElementById(id).value.trim(); }
 function num(id){ return Number(document.getElementById(id).value || 0); }
 function save(){ localStorage.setItem('salary_policies_v2', JSON.stringify(policies)); render(); }
