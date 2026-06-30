@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proposed Salary Slip App</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{--blue:#003087;--yellow:#ffb800;--bg:#f3f6ff;--card:#fff;--text:#14213d;--danger:#c1121f;--ok:#087f5b;}
+  *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:linear-gradient(135deg,var(--blue),#0057d9);color:white;padding:18px 14px;text-align:center}
+  header h1{margin:0;font-size:22px} header p{margin:6px 0 0;font-size:13px;opacity:.95}
+  main{max-width:980px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+  h2{font-size:18px;margin:0 0 12px;color:var(--blue)}
+  label{display:block;font-weight:700;font-size:13px;margin:9px 0 5px}
+  input,select{width:100%;padding:11px;border:1px solid #cfd8ea;border-radius:10px;font-size:15px;background:white}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  button{border:0;border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer;background:var(--blue);color:white;font-size:14px}
+  button.secondary{background:#495057} button.gold{background:var(--yellow);color:#111} button.danger{background:var(--danger)} button.ok{background:var(--ok)}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px} th,td{border:1px solid #d9e1f2;padding:8px;text-align:left} th{background:#eaf0ff;color:var(--blue)}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.box{background:#eef4ff;border-radius:12px;padding:12px;text-align:center}.box b{display:block;font-size:20px;color:var(--blue)}
+  .slip{background:white;border:2px solid var(--blue);padding:18px;border-radius:12px}.slip-title{text-align:center;color:var(--blue);font-size:22px;font-weight:800}.small{font-size:12px;color:#5c677d}.hide{display:none}
+  @media(max-width:700px){.grid,.grid4,.summary{grid-template-columns:1fr} table{font-size:12px} th,td{padding:6px}.actions button{flex:1 1 48%}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Proposed Salary Slip Generator</h1>
+  <p>Fixed version: database save, more policies, safe PDF, backup & restore</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Advisor / Slip Details</h2>
+    <div class="grid">
+      <div><label>Advisor Name</label><input id="advisorName" placeholder="Enter advisor name"></div>
+      <div><label>Month</label><input id="slipMonth" placeholder="June 2026"></div>
+      <div><label>Target Income</label><input id="targetIncome" type="number" value="50000"></div>
+      <div><label>Branch / Team</label><input id="branch" placeholder="LIC of India, Tirunelveli"></div>
+    </div>
+    <div class="actions">
+      <button onclick="saveSettings()" class="ok">Save Details</button>
+      <button onclick="clearAll()" class="danger">Clear All Data</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Add / Upload Policy</h2>
+    <div class="grid4">
+      <div><label>Plan No.</label><input id="planNo" placeholder="736"></div>
+      <div><label>Plan Name</label><input id="planName" placeholder="Jeevan Labh"></div>
+      <div><label>Premium</label><input id="premium" type="number" placeholder="30000"></div>
+      <div><label>Commission %</label><input id="commissionPct" type="number" placeholder="20"></div>
+      <div><label>Policy Count</label><input id="policyCount" type="number" value="1"></div>
+      <div><label>Term</label><input id="term" placeholder="16"></div>
+      <div><label>PPT</label><input id="ppt" placeholder="10"></div>
+      <div><label>Customer Name</label><input id="customerName" placeholder="Optional"></div>
+    </div>
+    <div class="actions">
+      <button onclick="addPolicy()" class="gold">Add Policy</button>
+      <button onclick="loadSample()" class="secondary">Load Sample 8 Plans</button>
+    </div>
+    <p class="small">Data is saved automatically in this browser. For safety, use Export Backup JSON regularly.</p>
+  </section>
+
+  <section class="card">
+    <h2>Policy Database</h2>
+    <div class="summary">
+      <div class="box">Policies<b id="sumCount">0</b></div>
+      <div class="box">Total Premium<b id="sumPremium">₹0</b></div>
+      <div class="box">Income<b id="sumIncome">₹0</b></div>
+    </div>
+    <div style="overflow:auto">
+      <table id="policyTable"><thead><tr><th>#</th><th>Plan</th><th>Name</th><th>Premium</th><th>Comm %</th><th>Income</th><th>Count</th><th>Action</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="actions">
+      <button onclick="downloadPDF()">Download PDF</button>
+      <button onclick="exportBackup()" class="ok">Export Backup JSON</button>
+      <button onclick="document.getElementById('importFile').click()" class="secondary">Import Backup JSON</button>
+      <input id="importFile" type="file" accept="application/json" class="hide" onchange="importBackup(event)">
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="slip" id="salarySlip">
+      <div class="slip-title">PROPOSED SALARY SLIP</div>
+      <p><b>Advisor:</b> <span id="viewAdvisor">-</span></p>
+      <p><b>Month:</b> <span id="viewMonth">-</span></p>
+      <p><b>Branch / Team:</b> <span id="viewBranch">-</span></p>
+      <p><b>Target Income:</b> <span id="viewTarget">₹50,000</span></p>
+      <hr>
+      <p><b>Total Policies:</b> <span id="viewPolicies">0</span></p>
+      <p><b>Total Premium:</b> <span id="viewPremium">₹0</span></p>
+      <p><b>Expected Commission Income:</b> <span id="viewIncome">₹0</span></p>
+      <p class="small">This is only a proposed calculation sheet for advisor planning purpose.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+let policies = JSON.parse(localStorage.getItem('salary_policies_v2') || '[]');
+let settings = JSON.parse(localStorage.getItem('salary_settings_v2') || '{}');
+
+function rupee(n){ return '₹' + Number(n||0).toLocaleString('en-IN'); }
+function val(id){ return document.getElementById(id).value.trim(); }
+function num(id){ return Number(document.getElementById(id).value || 0); }
+function save(){ localStorage.setItem('salary_policies_v2', JSON.stringify(policies)); render(); }
+
+function saveSettings(){
+  settings = { advisorName:val('advisorName'), slipMonth:val('slipMonth'), targetIncome:num('targetIncome'), branch:val('branch') };
+  localStorage.setItem('salary_settings_v2', JSON.stringify(settings)); render(); alert('Saved successfully');
+}
+
+function loadSettings(){
+  document.getElementById('advisorName').value=settings.advisorName||'';
+  document.getElementById('slipMonth').value=settings.slipMonth||'';
+  document.getElementById('targetIncome').value=settings.targetIncome||50000;
+  document.getElementById('branch').value=settings.branch||'';
+}
+
+function addPolicy(){
+  const premium=num('premium'), pct=num('commissionPct'), count=num('policyCount')||1;
+  if(!val('planNo') || !premium || !pct){ alert('Enter Plan No, Premium and Commission %.'); return; }
+  policies.push({ planNo:val('planNo'), planName:val('planName'), premium, commissionPct:pct, count, term:val('term'), ppt:val('ppt'), customerName:val('customerName') });
+  ['planNo','planName','premium','commissionPct','term','ppt','customerName'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('policyCount').value=1;
+  save();
+}
+
+function deletePolicy(i){ if(confirm('Delete this policy?')){ policies.splice(i,1); save(); } }
+
+function editPolicy(i){
+  const p=policies[i];
+  document.getElementById('planNo').value=p.planNo;
+  document.getElementById('planName').value=p.planName;
+  document.getElementById('premium').value=p.premium;
+  document.getElementById('commissionPct').value=p.commissionPct;
+  document.getElementById('policyCount').value=p.count;
+  document.getElementById('term').value=p.term||'';
+  document.getElementById('ppt').value=p.ppt||'';
+  document.getElementById('customerName').value=p.customerName||'';
+  policies.splice(i,1); save(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function totals(){
+  return policies.reduce((a,p)=>{
+    const inc=Number(p.premium)*Number(p.commissionPct)/100*Number(p.count||1);
+    a.count+=Number(p.count||1);
+    a.premium+=Number(p.premium)*Number(p.count||1);
+    a.income+=inc;
+    return a;
+  },{count:0,premium:0,income:0});
+}
+
+function render(){
+  const tbody=document.querySelector('#policyTable tbody'); tbody.innerHTML='';
+  policies.forEach((p,i)=>{
+    const inc=p.premium*p.commissionPct/100*(p.count||1);
+    tbody.innerHTML += `<tr><td>${i+1}</td><td>${p.planNo}</td><td>${p.planName||'-'}</td><td>${rupee(p.premium)}</td><td>${p.commissionPct}%</td><td>${rupee(inc)}</td><td>${p.count||1}</td><td><button onclick="editPolicy(${i})" class="secondary">Edit</button> <button onclick="deletePolicy(${i})" class="danger">Delete</button></td></tr>`;
+  });
+  const t=totals();
+  document.getElementById('sumCount').innerText=t.count;
+  document.getElementById('sumPremium').innerText=rupee(t.premium);
+  document.getElementById('sumIncome').innerText=rupee(t.income);
+  document.getElementById('viewAdvisor').innerText=settings.advisorName||'-';
+  document.getElementById('viewMonth').innerText=settings.slipMonth||'-';
+  document.getElementById('viewBranch').innerText=settings.branch||'-';
+  document.getElementById('viewTarget').innerText=rupee(settings.targetIncome||50000);
+  document.getElementById('viewPolicies').innerText=t.count;
+  document.getElementById('viewPremium').innerText=rupee(t.premium);
+  document.getElementById('viewIncome').innerText=rupee(t.income);
+}
+
+function downloadPDF(){
+  saveSettingsNoAlert();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+  const t=totals();
+  let y=14;
+
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(16);
+  pdf.text('PROPOSED SALARY SLIP',105,y,{align:'center'});
+
+  y+=10;
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica','normal');
+  pdf.text(`Advisor: ${settings.advisorName||'-'}`,14,y); y+=6;
+  pdf.text(`Month: ${settings.slipMonth||'-'}`,14,y); y+=6;
+  pdf.text(`Branch/Team: ${settings.branch||'-'}`,14,y); y+=6;
+  pdf.text(`Target Income: ${rupee(settings.targetIncome||50000)}`,14,y); y+=8;
+
+  pdf.setFont('helvetica','bold');
+  pdf.text(`Total Policies: ${t.count}`,14,y);
+  pdf.text(`Total Premium: ${rupee(t.premium)}`,70,y);
+  pdf.text(`Income: ${rupee(t.income)}`,135,y);
+  y+=10;
+
+  pdf.line(14,y,196,y); y+=7;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica','bold');
+  pdf.text('#',14,y); pdf.text('Plan',23,y); pdf.text('Name',42,y); pdf.text('Premium',92,y); pdf.text('Comm',124,y); pdf.text('Count',145,y); pdf.text('Income',164,y);
+  y+=5;
+
+  pdf.setFont('helvetica','normal');
+  policies.forEach((p,i)=>{
+    if(y>275){pdf.addPage(); y=14;}
+    const inc=p.premium*p.commissionPct/100*(p.count||1);
+    pdf.text(String(i+1),14,y);
+    pdf.text(String(p.planNo),23,y);
+    pdf.text(String(p.planName||'-').slice(0,28),42,y);
+    pdf.text(rupee(p.premium),92,y);
+    pdf.text(`${p.commissionPct}%`,124,y);
+    pdf.text(String(p.count||1),145,y);
+    pdf.text(rupee(inc),164,y);
+    y+=6;
+  });
+
+  y+=4;
+  if(y>270){pdf.addPage(); y=14;}
+  pdf.setFont('helvetica','bold');
+  pdf.text('Note: This is only a proposed calculation sheet for advisor planning purpose.',14,y);
+  pdf.save('proposed-salary-slip.pdf');
+}
+
+function saveSettingsNoAlert(){
+  settings = { advisorName:val('advisorName'), slipMonth:val('slipMonth'), targetIncome:num('targetIncome'), branch:val('branch') };
+  localStorage.setItem('salary_settings_v2', JSON.stringify(settings));
+}
+
+function exportBackup(){
+  const data={settings,policies,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='salary-slip-backup.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importBackup(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      settings=data.settings||{};
+      policies=data.policies||[];
+      localStorage.setItem('salary_settings_v2',JSON.stringify(settings));
+      localStorage.setItem('salary_policies_v2',JSON.stringify(policies));
+      loadSettings(); render(); alert('Backup imported successfully');
+    }catch(err){ alert('Invalid backup file'); }
+  };
+  r.readAsText(file);
+}
+
+function clearAll(){
+  if(confirm('Clear all saved data?')){
+    policies=[];
+    settings={};
+    localStorage.removeItem('salary_policies_v2');
+    localStorage.removeItem('salary_settings_v2');
+    loadSettings(); render();
+  }
+}
+
+function loadSample(){
+  policies = [
+    {planNo:'736',planName:'Jeevan Labh',premium:30000,commissionPct:20,count:2,term:'16',ppt:'10'},
+    {planNo:'745',planName:'Jeevan Umang',premium:35000,commissionPct:20,count:2,term:'100-age',ppt:'15'},
+    {planNo:'771',planName:'Jeevan Utsav',premium:40000,commissionPct:20,count:1,term:'Whole Life',ppt:'10'},
+    {planNo:'734',planName:'Jeevan Tarun',premium:30000,commissionPct:20,count:1,term:'25-age',ppt:'20-age'},
+    {planNo:'733',planName:'Jeevan Lakshya',premium:45000,commissionPct:20,count:2,term:'25',ppt:'22'}
+  ];
+  save();
+}
+
+loadSettings(); render();
+</script>
+</body>
+</html>
