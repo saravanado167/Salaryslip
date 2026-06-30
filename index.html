@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposed Monthly Income Statement</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+:root{
+  --blue:#003087;
+  --gold:#ffcc00;
+  --green:#0f9d58;
+  --orange:#f57c00;
+  --red:#d32f2f;
+  --purple:#5e35b1;
+  --bg:#eef3ff;
+  --card:#ffffff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:var(--bg);
+  color:#111;
+}
+header{
+  background:linear-gradient(135deg,var(--blue),#001b55);
+  color:white;
+  padding:18px;
+  text-align:center;
+}
+header h1{
+  margin:0;
+  font-size:22px;
+  color:var(--gold);
+}
+header p{margin:5px 0 0;font-size:13px}
+
+.container{
+  max-width:1000px;
+  margin:auto;
+  padding:14px;
+}
+.section{
+  background:white;
+  border-radius:16px;
+  padding:15px;
+  margin-bottom:14px;
+  box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+h2{margin-top:0;color:var(--blue);font-size:19px}
+label{
+  font-weight:bold;
+  font-size:13px;
+  display:block;
+  margin-bottom:5px;
+}
+input,select{
+  width:100%;
+  padding:11px;
+  border:1px solid #ccc;
+  border-radius:9px;
+  font-size:15px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.plan-card{
+  border:2px solid #dbe5ff;
+  border-radius:15px;
+  padding:13px;
+  margin-bottom:12px;
+  background:#fbfdff;
+}
+.plan-title{
+  font-weight:bold;
+  color:var(--blue);
+  margin-bottom:10px;
+  font-size:17px;
+}
+.badge{
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:20px;
+  color:white;
+  font-size:12px;
+  margin-top:8px;
+}
+.summary{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+.sum-card{
+  background:linear-gradient(135deg,#fff8cf,#ffffff);
+  border-left:5px solid var(--gold);
+  padding:12px;
+  border-radius:12px;
+}
+.sum-card small{display:block;color:#555}
+.sum-card b{font-size:18px;color:var(--blue)}
+.net{
+  text-align:center;
+  background:linear-gradient(135deg,var(--blue),#001b55);
+  color:white;
+  border-radius:18px;
+  padding:20px;
+}
+.net h2{color:var(--gold)}
+.net-amount{
+  font-size:38px;
+  font-weight:bold;
+}
+button{
+  border:none;
+  border-radius:10px;
+  padding:12px 16px;
+  font-weight:bold;
+  cursor:pointer;
+  margin:5px;
+}
+.primary{background:var(--blue);color:white}
+.gold{background:var(--gold);color:var(--blue)}
+.green{background:var(--green);color:white}
+.red{background:var(--red);color:white}
+.actions{text-align:center}
+#report{
+  background:white;
+  padding:24px;
+  width:794px;
+  max-width:100%;
+  margin:auto;
+}
+.report-header{
+  text-align:center;
+  border-bottom:4px solid var(--gold);
+  padding-bottom:12px;
+}
+.report-header h1{
+  color:var(--blue);
+  margin:0;
+}
+.logo{
+  font-size:34px;
+  font-weight:bold;
+  color:var(--blue);
+}
+.report-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:15px;
+  font-size:12px;
+}
+.report-table th{
+  background:var(--blue);
+  color:white;
+  padding:8px;
+}
+.report-table td{
+  border:1px solid #ccc;
+  padding:7px;
+  text-align:center;
+}
+.footer-note{
+  font-size:11px;
+  margin-top:18px;
+  text-align:center;
+  color:#555;
+}
+.hidden{display:none}
+
+@media(max-width:650px){
+  .grid,.summary{grid-template-columns:1fr}
+  .net-amount{font-size:30px}
+}
+@media print{
+  body{background:white}
+  .no-print{display:none}
+  #report{width:100%;box-shadow:none}
+}
+</style>
+</head>
+
+<body>
+
+<header class="no-print">
+  <h1>Proposed Monthly Income Statement</h1>
+  <p>SK Success Team</p>
+</header>
+
+<div class="container no-print">
+
+  <div class="section">
+    <h2>Advisor Details</h2>
+    <div class="grid">
+      <div>
+        <label>Advisor Name</label>
+        <input id="advisorName" placeholder="Enter advisor name">
+      </div>
+      <div>
+        <label>Advisor Code</label>
+        <input id="advisorCode" placeholder="Enter advisor code">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Plan Cards</h2>
+    <div id="planCards"></div>
+  </div>
+
+  <div class="section">
+    <h2>Other Earnings</h2>
+    <div class="grid">
+      <div>
+        <label>Manual Incentive</label>
+        <input type="number" id="manualIncentive" value="0" oninput="calculate()">
+      </div>
+      <div>
+        <label>Cash Award / Other Income</label>
+        <input type="number" id="cashAward" value="0" oninput="calculate()">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Live Summary</h2>
+    <div class="summary">
+      <div class="sum-card"><small>Total Policies</small><b id="sPolicies">0</b></div>
+      <div class="sum-card"><small>Total Premium</small><b id="sPremium">₹0</b></div>
+      <div class="sum-card"><small>First Year Commission</small><b id="sCommission">₹0</b></div>
+      <div class="sum-card"><small>Bonus Commission</small><b id="sBonus">₹0</b></div>
+      <div class="sum-card"><small>Additional 2%</small><b id="sAdd2">₹0</b></div>
+      <div class="sum-card"><small>Other Earnings</small><b id="sOther">₹0</b></div>
+    </div>
+    <br>
+    <div class="net" id="netBox">
+      <h2>Net Proposed Income</h2>
+      <div class="net-amount" id="sNet">₹0</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" onclick="generatePreview()">Preview Report</button>
+    <button class="gold" onclick="downloadPDF()">Download PDF</button>
+    <button class="green" onclick="downloadPNG()">Download PNG</button>
+    <button class="primary" onclick="exportCSV()">Export Excel CSV</button>
+    <button class="green" onclick="shareWhatsApp()">Share WhatsApp</button>
+    <button class="gold" onclick="saveStatement()">Save</button>
+    <button class="red" onclick="resetAll()">Reset</button>
+  </div>
+
+</div>
+
+<div id="report" class="hidden"></div>
+
+<script>
+const plans=[
+ {no:"736",name:"Jeevan Labh",ppt:[8,9,10,11,12,13,14,15,16],add2:true,bonus:true},
+ {no:"745",name:"Jeevan Utsav",ppt:[10,11,12,13,14,15],add2:true,bonus:true},
+ {no:"771",name:"Yuva Credit Life",ppt:[5,10,15],add2:false,bonus:true},
+ {no:"734",name:"Jeevan Tarun",ppt:[8,9,10,11,12,13,14,15],add2:true,bonus:true},
+ {no:"733",name:"Jeevan Lakshya",ppt:[10,11,12,13,14,15],add2:true,bonus:true},
+ {no:"873",name:"Index Plus",ppt:[10,15,20,25],add2:false,bonus:true},
+ {no:"758",name:"New Jeevan Shanti",ppt:[1],add2:false,bonus:false},
+ {no:"867",name:"New Pension Plus",ppt:[10,15,20,25,30,35,40,42],add2:false,bonus:true}
+];
+
+function money(n){
+ return "₹"+Math.round(n).toLocaleString("en-IN");
+}
+
+function getMonth(){
+ return new Date().toLocaleString("en-IN",{month:"long",year:"numeric"});
+}
+
+function getCommission(planNo,ppt){
+ ppt=Number(ppt);
+ if(["736","745","734","733"].includes(planNo)){
+   if(ppt>=15) return 20;
+   if(ppt>=10) return 15;
+   if(ppt>=8) return 8;
+ }
+ if(planNo==="771"){
+   if(ppt>=15) return 25;
+   if(ppt>=10) return 20;
+   if(ppt>=5) return 10;
+ }
+ if(planNo==="873") return 5.75;
+ if(planNo==="867") return 5;
+ if(planNo==="758") return 2;
+ return 0;
+}
+
+function createCards(){
+ const box=document.getElementById("planCards");
+ box.innerHTML="";
+ plans.forEach((p,i)=>{
+   box.innerHTML+=`
+   <div class="plan-card">
+     <div class="plan-title">${p.no} - <input id="name${i}" value="${p.name}" oninput="calculate()" style="width:65%;display:inline-block"></div>
+     <div class="grid">
+       <div>
+         <label>No. of Policies</label>
+         <input type="number" id="pol${i}" value="0" oninput="calculate()">
+       </div>
+       <div>
+         <label>Premium / Policy</label>
+         <input type="number" id="premium${i}" value="30000" oninput="calculate()">
+       </div>
+       <div>
+         <label>PPT</label>
+         <select id="ppt${i}" onchange="autoCommission(${i})">
+           ${p.ppt.map(x=>`<option value="${x}">${x}</option>`).join("")}
+         </select>
+       </div>
+       <div>
+         <label>Commission %</label>
+         <input type="number" step="0.01" id="comm${i}" value="0" oninput="calculate()">
+       </div>
+       <div>
+         <label>Bonus 40%</label>
+         <select id="bonus${i}" onchange="calculate()">
+           <option value="${p.bonus?1:0}">${p.bonus?"Yes":"No"}</option>
+           <option value="1">Yes</option>
+           <option value="0">No</option>
+         </select>
+       </div>
+       <div>
+         <label>Additional 2%</label>
+         <select id="add2${i}" onchange="calculate()">
+           <option value="${p.add2?1:0}">${p.add2?"Yes":"No"}</option>
+           <option value="1">Yes</option>
+           <option value="0">No</option>
+         </select>
+       </div>
+     </div>
+     <span class="badge" id="badge${i}">₹0</span>
+   </div>`;
+ });
+ plans.forEach((p,i)=>autoCommission(i));
+}
+
+function autoCommission(i){
+ const ppt=document.getElementById("ppt"+i).value;
+ document.getElementById("comm"+i).value=getCommission(plans[i].no,ppt);
+ calculate();
+}
+
+function calculate(){
+ let totalPolicies=0,totalPremium=0,totalComm=0,totalBonus=0,totalAdd2=0;
+ plans.forEach((p,i)=>{
+   const pol=Number(document.getElementById("pol"+i).value)||0;
+   const premium=Number(document.getElementById("premium"+i).value)||0;
+   const comm=Number(document.getElementById("comm"+i).value)||0;
+   const bonusOn=Number(document.getElementById("bonus"+i).value);
+   const add2On=Number(document.getElementById("add2"+i).value);
+
+   const tp=pol*premium;
+   const fyc=tp*comm/100;
+   const bonus=bonusOn?fyc*40/100:0;
+   const add2=add2On?tp*2/100:0;
+   const rowTotal=fyc+bonus+add2;
+
+   totalPolicies+=pol;
+   totalPremium+=tp;
+   totalComm+=fyc;
+   totalBonus+=bonus;
+   totalAdd2+=add2;
+
+   document.getElementById("badge"+i).innerText=`${comm}% | ${money(rowTotal)}`;
+ });
+
+ const other=(Number(document.getElementById("manualIncentive").value)||0)+(Number(document.getElementById("cashAward").value)||0);
+ const net=totalComm+totalBonus+totalAdd2+other;
+
+ document.getElementById("sPolicies").innerText=totalPolicies;
+ document.getElementById("sPremium").innerText=money(totalPremium);
+ document.getElementById("sCommission").innerText=money(totalComm);
+ document.getElementById("sBonus").innerText=money(totalBonus);
+ document.getElementById("sAdd2").innerText=money(totalAdd2);
+ document.getElementById("sOther").innerText=money(other);
+ document.getElementById("sNet").innerText=money(net);
+
+ const netBox=document.getElementById("netBox");
+ if(net<25000) netBox.style.background="linear-gradient(135deg,#d32f2f,#8b0000)";
+ else if(net<50000) netBox.style.background="linear-gradient(135deg,#f57c00,#b45300)";
+ else if(net<100000) netBox.style.background="linear-gradient(135deg,#0f9d58,#006b3c)";
+ else netBox.style.background="linear-gradient(135deg,#003087,#ffcc00)";
+ return {totalPolicies,totalPremium,totalComm,totalBonus,totalAdd2,other,net};
+}
+
+function selectedRows(){
+ let rows=[];
+ plans.forEach((p,i)=>{
+   const pol=Number(document.getElementById("pol"+i).value)||0;
+   if(pol>0){
+     const premium=Number(document.getElementById("premium"+i).value)||0;
+     const comm=Number(document.getElementById("comm"+i).value)||0;
+     const tp=pol*premium;
+     const fyc=tp*comm/100;
+     const bonus=Number(document.getElementById("bonus"+i).value)?fyc*0.40:0;
+     const add2=Number(document.getElementById("add2"+i).value)?tp*0.02:0;
+     rows.push({
+       no:p.no,
+       name:document.getElementById("name"+i).value,
+       pol,premium,ppt:document.getElementById("ppt"+i).value,
+       comm,tp,fyc,bonus,add2,total:fyc+bonus+add2
+     });
+   }
+ });
+ return rows;
+}
+
+function generatePreview(){
+ const r=calculate();
+ const rows=selectedRows();
+ const advisor=document.getElementById("advisorName").value||"Sample Advisor";
+ const code=document.getElementById("advisorCode").value||"Sample Code";
+
+ let html=`
+ <div class="report-header">
+   <div class="logo">LIC</div>
+   <h1>Proposed Monthly Income Statement</h1>
+   <p><b>SK Success Team</b></p>
+ </div>
+
+ <h2>Executive Summary</h2>
+ <p><b>Advisor Name:</b> ${advisor}<br>
+ <b>Advisor Code:</b> ${code}<br>
+ <b>Statement Month:</b> ${getMonth()}</p>
+
+ <div class="net">
+   <h2>Net Proposed Income</h2>
+   <div class="net-amount">${money(r.net)}</div>
+ </div>
+
+ <table class="report-table">
+ <tr>
+   <th>Plan</th><th>Name</th><th>Policies</th><th>Premium/Policy</th><th>Total Premium</th>
+   <th>PPT</th><th>Comm%</th><th>FYC</th><th>Bonus</th><th>2%</th><th>Total</th>
+ </tr>`;
+
+ rows.forEach(x=>{
+   html+=`<tr>
+     <td>${x.no}</td><td>${x.name}</td><td>${x.pol}</td><td>${money(x.premium)}</td>
+     <td>${money(x.tp)}</td><td>${x.ppt}</td><td>${x.comm}%</td>
+     <td>${money(x.fyc)}</td><td>${money(x.bonus)}</td><td>${money(x.add2)}</td><td>${money(x.total)}</td>
+   </tr>`;
+ });
+
+ html+=`</table>
+
+ <h2>Income Breakdown</h2>
+ <table class="report-table">
+ <tr><td>Total Policies</td><td>${r.totalPolicies}</td></tr>
+ <tr><td>Total Annual Premium</td><td>${money(r.totalPremium)}</td></tr>
+ <tr><td>First Year Commission</td><td>${money(r.totalComm)}</td></tr>
+ <tr><td>Bonus Commission</td><td>${money(r.totalBonus)}</td></tr>
+ <tr><td>Additional 2%</td><td>${money(r.totalAdd2)}</td></tr>
+ <tr><td>Other Earnings</td><td>${money(r.other)}</td></tr>
+ <tr><th>Net Proposed Income</th><th>${money(r.net)}</th></tr>
+ </table>
+
+ <h2>Achievement Level</h2>
+ <p>${achievement(r.net)}</p>
+
+ <div class="footer-note">
+ This is an illustrative proposed income statement for motivation and recruitment purposes only. It is not an official LIC salary or commission statement.
+ </div>`;
+
+ const report=document.getElementById("report");
+ report.innerHTML=html;
+ report.classList.remove("hidden");
+ report.scrollIntoView({behavior:"smooth"});
+}
+
+function achievement(net){
+ if(net>=100000) return "👑 Elite Achiever — Excellent income projection.";
+ if(net>=50000) return "🥇 Excellent Performer — ₹50,000+ income milestone achieved.";
+ if(net>=25000) return "🥈 Good Performer — Improve with a few more policies.";
+ return "🥉 Starter Level — Add more eligible policies to reach ₹50,000.";
+}
+
+async function downloadPDF(){
+ generatePreview();
+ const {jsPDF}=window.jspdf;
+ const report=document.getElementById("report");
+ const canvas=await html2canvas(report,{scale:2});
+ const img=canvas.toDataURL("image/png");
+ const pdf=new jsPDF("p","mm","a4");
+ const w=210;
+ const h=canvas.height*w/canvas.width;
+ pdf.addImage(img,"PNG",0,0,w,h);
+ const advisor=(document.getElementById("advisorName").value||"Advisor").replaceAll(" ","");
+ const code=(document.getElementById("advisorCode").value||"Code").replaceAll(" ","");
+ pdf.save(`${code}_${advisor}_${getMonth().replaceAll(" ","")}.pdf`);
+}
+
+async function downloadPNG(){
+ generatePreview();
+ const canvas=await html2canvas(document.getElementById("report"),{scale:2});
+ const link=document.createElement("a");
+ link.download="Proposed_Income_Statement.png";
+ link.href=canvas.toDataURL();
+ link.click();
+}
+
+function exportCSV(){
+ const rows=selectedRows();
+ let csv="Plan No,Plan Name,Policies,Premium Per Policy,Total Premium,PPT,Commission %,First Year Commission,Bonus,Additional 2%,Total\n";
+ rows.forEach(x=>{
+   csv+=`${x.no},${x.name},${x.pol},${x.premium},${x.tp},${x.ppt},${x.comm},${x.fyc},${x.bonus},${x.add2},${x.total}\n`;
+ });
+ const blob=new Blob([csv],{type:"text/csv"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="income_statement.csv";
+ a.click();
+}
+
+function shareWhatsApp(){
+ const r=calculate();
+ const advisor=document.getElementById("advisorName").value||"Advisor";
+ const msg=`Proposed Monthly Income Statement%0A%0AAdvisor: ${advisor}%0AMonth: ${getMonth()}%0ATotal Policies: ${r.totalPolicies}%0ATotal Premium: ${money(r.totalPremium)}%0ANet Proposed Income: ${money(r.net)}%0A%0ASK Success Team`;
+ window.open("https://wa.me/?text="+msg,"_blank");
+}
+
+function saveStatement(){
+ const data={
+   advisorName:document.getElementById("advisorName").value,
+   advisorCode:document.getElementById("advisorCode").value,
+   month:getMonth(),
+   rows:selectedRows(),
+   summary:calculate()
+ };
+ let saved=JSON.parse(localStorage.getItem("statements")||"[]");
+ saved.push(data);
+ localStorage.setItem("statements",JSON.stringify(saved));
+ alert("Statement saved successfully");
+}
+
+function resetAll(){
+ if(confirm("Reset all data?")){
+   location.reload();
+ }
+}
+
+createCards();
+calculate();
+</script>
+
+</body>
+</html>
